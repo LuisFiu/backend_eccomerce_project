@@ -18,8 +18,8 @@ export default class cartDAO {
     try {
       const carts = await this.get();
 
-      if (carts === -1) {
-        return -1;
+      if (carts === -4) {
+        return -4;
       }
 
       const cart = await cartModel.findOne(params);
