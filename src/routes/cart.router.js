@@ -4,33 +4,29 @@ import { Validator } from "../middlewares/credentialsValidator.js";
 
 const router = Router();
 
-router.post(
-  "/",
-  Validator(["admin", "user"], "Create Cart"),
-  cartsController.create
-);
+router.post("/", Validator(["admin"], "Create Cart"), cartsController.create);
 
 router.get(
   "/:cid",
-  Validator(["admin", "user"], "Get Cart by ID"),
+  Validator(["user"], "Get Cart by ID"),
   cartsController.getById
 );
 
 router.put(
   "/:cid/product/:pid",
-  Validator(["user", "admin"], "Add Product to Cart"),
+  Validator(["user"], "Add Product to Cart"),
   cartsController.addProduct
 );
 
 router.put(
   "/:cid",
-  Validator(["user", "admin"], "Update Cart Products"),
+  Validator(["user"], "Update Cart Products"),
   cartsController.update
 );
 
 router.delete(
   "/:cid/product/:pid",
-  Validator(["user", "admin"], "Delete Product from Cart"),
+  Validator(["user"], "Delete Product from Cart"),
   cartsController.deleteProductById
 );
 
@@ -42,7 +38,7 @@ router.delete(
 
 router.post(
   "/:cid/purchase",
-  Validator(["user", "admin"], "Purchase"),
+  Validator(["user"], "Purchase"),
   cartsController.purchase
 );
 

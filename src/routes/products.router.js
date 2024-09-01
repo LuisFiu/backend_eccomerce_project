@@ -6,31 +6,27 @@ const router = Router();
 
 router.post(
   "/",
-  Validator(["admin", "user"], "Create Product"),
+  Validator(["admin"], "Create Product"),
   productsController.create
 );
 
-router.get(
-  "/",
-  Validator(["admin", "user"], "Get Products"),
-  productsController.get
-);
+router.get("/", Validator(["user"], "Get Products"), productsController.get);
 
 router.get(
   "/:id",
-  Validator(["admin", "user"], "Get Product By ID"),
+  Validator(["user"], "Get Product By ID"),
   productsController.getById
 );
 
 router.put(
   "/:id",
-  Validator(["admin", "user"], "Update Product"),
+  Validator(["admin"], "Update Product"),
   productsController.update
 );
 
 router.delete(
   "/:id",
-  Validator(["admin", "user"], "Delete Product"),
+  Validator(["admin"], "Delete Product"),
   productsController.deleteById
 );
 
