@@ -23,14 +23,6 @@ export default class CartRepository {
     return this.dao.updateOne(params, operation);
   }
 
-  addProductById(id, pid, qty) {
-    return this.dao.addProduct(id, pid, qty);
-  }
-
-  replaceProducts(id, updatedValues) {
-    return this.dao.replace(id, updatedValues);
-  }
-
   deleteProduct(id, pid) {
     return this.dao.delete(id, pid);
   }

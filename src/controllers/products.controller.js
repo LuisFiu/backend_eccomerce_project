@@ -1,5 +1,4 @@
 import { ProductService } from "../services/services.js";
-import productModel from "../db/mongo/models/product.model.js";
 import { makeid } from "../utils.js";
 import getErrorDetails from "../services/errorService.js";
 
