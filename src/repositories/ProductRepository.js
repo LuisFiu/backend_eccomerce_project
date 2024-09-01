@@ -3,27 +3,35 @@ export default class ProductRepository {
     this.dao = dao;
   }
 
-  getProducts() {
+  getAllProducts() {
     return this.dao.get();
+  }
+
+  getPaginatedProducts(params) {
+    return this.dao.paginate(params);
   }
 
   getProductById(id) {
     return this.dao.getOne({ _id: id });
   }
 
+  find(params, operation) {
+    return this.dao.find(params, operation);
+  }
+
+  updateById(params, operation) {
+    return this.dao.updateOne(params, operation);
+  }
+
   createProduct(product) {
     return this.dao.create(product);
   }
 
-  editProduct(id, updatedValues) {
-    return this.dao.replace(id, updatedValues);
-  }
-
   updateStock(id, newStock) {
-    return this.dao.update({ _id: id }, { $set: { stock: newStock } });
+    return this.dao.updateOne({ _id: id }, { $set: { stock: newStock } });
   }
 
   deleteProduct(id) {
-    return this.dao.delete({ _id: id });
+    return this.dao.deleteOne({ _id: id });
   }
 }

@@ -7,6 +7,7 @@ import {
 } from "../services/services.js";
 
 import getErrorDetails from "../services/errorService.js";
+import { makeid } from "../utils.js";
 
 //Defino Origin para busqueda de errores posteriormente
 
@@ -32,17 +33,32 @@ const getById = async (req, res) => {
 
   const result = await CartService.getCartById(cartId);
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  let operationResult;
+
+  if (result == []) {
+    operationResult = -4;
+  }
+
+  if (result < 0 || result === null) {
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
 
-  res.send({ status: "success", message: "Cart found", cart: result });
+  res.send({
+    status: "success",
+    message: "Cart found",
+    cart: result,
+  });
 };
 
 const addProduct = async (req, res) => {
+  let operationResult;
+
   const quantity = req.body.quantity ?? 1;
 
   if (quantity < 0) {
@@ -55,19 +71,56 @@ const addProduct = async (req, res) => {
 
   const productId = req.params.pid;
 
-  const result = await CartService.addProductById(cartId, productId, quantity);
+  const cart = await CartService.getCartById({ _id: cartId });
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (cart === null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
 
+  const foundProduct = await ProductService.getProductById({ _id: productId });
+
+  if (foundProduct === null) {
+    operationResult = -3;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  const productInCart = cart.products.find((p) => p.product.equals(productId));
+
+  if (productInCart) {
+    await CartService.updateById(
+      { _id: cartId, "products.product": productId },
+      { $inc: { "products.$.quantity": quantity } }
+    );
+  } else {
+    await CartService.updateById(
+      { _id: cartId },
+      { $push: { products: { product: productId, quantity: quantity } } }
+    );
+  }
+
+  const updatedCart = await CartService.getCartById({ _id: cartId });
+
+  const populateCart = await CartService.populate(updatedCart);
+
   res.send({
     status: "success",
     message: "Product added successfully",
-    cart: result,
+    cart: populateCart,
   });
 };
 
@@ -106,54 +159,156 @@ const update = async (req, res) => {
 
   const cartId = req.params.cid;
 
-  const result = await CartService.replaceProducts(cartId, updatedValues);
+  const cart = await CartService.getCartById({ _id: cartId });
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (cart === null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
+
+  const productIds = updatedValues.map((product) => product.product);
+
+  const products = await ProductService.find({
+    _id: { $in: productIds },
+  });
+
+  if (products.length !== products.length) {
+    operationResult = -3;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  const updateCart = await CartService.updateById(
+    { _id: cartId },
+    { $set: { products: updatedValues } }
+  );
+
+  if (updateCart === null) {
+    operationResult = null;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  const updatedCart = await CartService.getCartById(cartId);
+
+  const populateCart = await CartService.populate(updatedCart);
 
   res.send({
     status: "success",
     message: "Products in cart successfully updated",
-    cart: result,
+    cart: populateCart,
   });
 };
 
 const deleteProductById = async (req, res) => {
+  let operationResult;
+
   const cartId = req.params.cid;
 
   const productId = req.params.pid;
 
-  const result = await CartService.deleteProduct(cartId, productId);
+  const cart = await CartService.getCartById({ _id: cartId });
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (cart === null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
+
+  const product = await ProductService.getProductById(productId);
+
+  if (product === null) {
+    operationResult = -3;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  const productInCart = await CartService.find({
+    _id: cartId,
+    "products.product": productId,
+  });
+
+  console.log(productInCart);
+
+  if (productInCart.length < 1) {
+    operationResult = -5;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  const updateCart = await CartService.updateById(
+    { _id: cartId },
+    { $pull: { products: { product: productId } } }
+  );
+
+  const updatedCart = await CartService.getCartById(cartId);
+
+  const populateCart = await CartService.populate(updatedCart);
 
   res.send({
     status: "success",
     message: "Product deleted successfully",
-    cart: result,
+    cart: populateCart,
   });
 };
 
 const clear = async (req, res) => {
+  let operationResult;
+
   const cartId = req.params.cid;
 
-  const result = await CartService.clearCart(cartId);
+  const cart = await CartService.getCartById({ _id: cartId });
 
-  if (result < 0) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (cart === null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
+
+  const result = await CartService.clearCart(cartId);
 
   res.send({
     status: "success",
@@ -236,7 +391,16 @@ const purchase = async (req, res) => {
 
   //Generar Ticket
 
-  const ticket = await TicketService.create(totalAmount, email);
+  const purchase_datetime = new Date().toISOString();
+
+  const purchaseInfo = {
+    amount: totalAmount,
+    purchaser: email,
+    purchase_datetime,
+    code: makeid(25),
+  };
+
+  const ticket = await TicketService.create(purchaseInfo);
 
   // Actualizar stock
 

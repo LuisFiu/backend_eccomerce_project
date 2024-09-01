@@ -71,10 +71,15 @@ const create = async (req, res) => {
 
   // Usuario envió todo OK se procede a crear el producto
 
-  const result = await ProductService.createProduct(newProduct);
+  const productResult = await ProductService.createProduct(newProduct);
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (!productResult === null) {
+    operationResult = -1;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
@@ -86,10 +91,10 @@ const create = async (req, res) => {
 };
 
 const get = async (req, res) => {
-  const paginationData = await productModel.paginate(
-    {},
-    { page: parseInt(req.query.page) || 1, limit: 5, lean: true }
+  const paginationData = await ProductService.getPaginatedProducts(
+    req.params.page
   );
+
   const {
     hasPrevPage,
     hasNextPage,
@@ -136,27 +141,47 @@ const get = async (req, res) => {
 };
 
 const getById = async (req, res) => {
+  let operationResult;
+
   const productId = req.params.id;
 
-  const result = await ProductService.getProductById(productId);
+  const products = await ProductService.getAllProducts();
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (products == null) {
+    operationResult = null;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
 
-  res.send({ status: "success", payload: result });
+  const foundProduct = await ProductService.getProductById(productId);
+
+  if (foundProduct == null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  res.send({ status: "success", payload: foundProduct });
 };
 
 const update = async (req, res) => {
+  let operationResult;
+
   const productId = req.params.id;
 
   const updatedValues = req.body;
-
-  console.log(`Received ID: ${productId}`);
-  console.log(`Updated Values:`, updatedValues);
 
   if (updatedValues.title == null) {
   } else {
@@ -204,19 +229,31 @@ const update = async (req, res) => {
     }
   }
 
-  const result = await ProductService.editProduct(productId, updatedValues);
+  const foundProduct = await ProductService.getProductById(productId);
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (foundProduct == null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
 
-  res.send({ status: "success", updatedProduct: result });
+  await ProductService.updateById({ _id: productId }, { $set: updatedValues });
+
+  res.send({
+    status: "success",
+    payload: { oldValues: foundProduct, newValues: updatedValues },
+  });
 };
 
 const deleteById = async (req, res) => {
+  let operationResult;
+
   const productId = req.params.id;
 
   const parsedProductId = parseInt(productId, 10);
@@ -227,19 +264,40 @@ const deleteById = async (req, res) => {
       .send({ status: "error", message: "Please send a valid Product ID" });
   }
 
-  const result = await ProductService.deleteProduct(productId);
+  const products = await ProductService.getAllProducts();
 
-  if (result < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
+  if (products == null) {
+    operationResult = null;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
     return res
       .status(httpCode)
       .send({ status: "error", error: errorName, message });
   }
 
+  const foundProduct = await ProductService.getProductById(productId);
+
+  if (foundProduct == null) {
+    operationResult = -2;
+
+    const { errorName, httpCode, message } = getErrorDetails(
+      operationResult,
+      origin
+    );
+    return res
+      .status(httpCode)
+      .send({ status: "error", error: errorName, message });
+  }
+
+  await ProductService.deleteProduct(productId);
+
   res.send({
     status: "success",
     message: "Product deleted successfully",
-    deletedProduct: result,
+    payload: foundProduct,
   });
 };
 
