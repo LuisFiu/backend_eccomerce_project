@@ -3,7 +3,7 @@ import config from "../config/config.js";
 import UserDTOSession from "../DTO/UserParsed.js";
 
 const register = async (req, res) => {
-  res.send({ status: "success", message: "registered" });
+  res.json({ status: "success", message: "registered" });
 };
 
 const login = async (req, res) => {
@@ -15,7 +15,7 @@ const login = async (req, res) => {
     expiresIn: 60 * 60, // 1 hora
   });
 
-  res.cookie("sid", token, { httpOnly: true }).send({
+  res.cookie("sid", token, { httpOnly: true }).json({
     status: "success",
     message: "logged",
   });
@@ -26,21 +26,19 @@ const logout = (req, res) => {
     res.clearCookie(cookie);
   }
 
-  res.send({ status: "success", message: "Logged out" });
+  res.json({ status: "success", message: "Logged out" });
 };
 
 const current = (req, res) => {
   if (!req.user) {
-    return res
-      .status(400)
-      .send({
-        status: "error",
-        error: "USER_NOT_LOGGED",
-        message: "not logged in",
-      });
+    return res.status(400).json({
+      status: "error",
+      error: "USER_NOT_LOGGED",
+      message: "not logged in",
+    });
   }
 
-  res.send(req.user);
+  res.json(req.user);
 };
 
 export default {

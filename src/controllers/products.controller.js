@@ -6,7 +6,14 @@ import getErrorDetails from "../services/errorService.js";
 
 const origin = "product";
 
-// Funciones para Base Router
+// Funcion para errores
+
+async function handleError(error, res) {
+  const { errorName, message, httpCode } = getErrorDetails(error, origin);
+  return res.status(httpCode).json({ error: errorName, message });
+}
+
+// Const para Exportar
 
 const create = async (req, res) => {
   const product = req.body;
@@ -14,7 +21,7 @@ const create = async (req, res) => {
   if (!product.title || !product.description || !product.price) {
     return res
       .status(400)
-      .send({ status: "error", error: "Incomplete values" });
+      .json({ status: "error", error: "Incomplete values" });
   }
 
   const newProduct = {
@@ -30,63 +37,43 @@ const create = async (req, res) => {
   if (typeof newProduct.price !== "number" || isNaN(newProduct.price)) {
     return res
       .status(400)
-      .send({ status: "error", error: "Price isn't a number" });
+      .json({ status: "error", error: "Price isn't a number" });
   }
 
-  if (newProduct.stock == null) {
-    newProduct.stock = 1;
-  } else {
-    if (
-      typeof newProduct.stock !== "number" ||
-      isNaN(newProduct.stock) ||
-      newProduct.stock < 0
-    ) {
-      return res.status(400).send({
-        status: "error",
-        error: "Stock isn't a number or is a negative value",
-      });
-    }
+  if (
+    typeof newProduct.stock !== "number" ||
+    isNaN(newProduct.stock) ||
+    newProduct.stock < 0
+  ) {
+    return res.status(400).json({
+      status: "error",
+      error: "Stock isn't a number or is a negative value",
+    });
   }
 
-  if (newProduct.status == null) {
-    newProduct.status = true;
-  } else {
-    if (typeof newProduct.status !== "boolean") {
-      return res
-        .status(400)
-        .send({ status: "error", error: "Status isn't true or false" });
-    }
+  if (typeof newProduct.status !== "boolean") {
+    return res
+      .status(400)
+      .json({ status: "error", error: "Status isn't true or false" });
   }
 
-  if (newProduct.category == null) {
-    newProduct.category = "Generic";
-  } else {
-    if (typeof newProduct.category !== "string") {
-      return res
-        .status(400)
-        .send({ status: "error", error: "Category isn't a Text" });
-    }
+  if (typeof newProduct.category !== "string") {
+    return res
+      .status(400)
+      .json({ status: "error", error: "Category isn't a Text" });
   }
 
   // Usuario envió todo OK se procede a crear el producto
 
   const productResult = await ProductService.createProduct(newProduct);
 
-  if (!productResult === null) {
-    operationResult = -1;
-
-    const { errorName, httpCode, message } = getErrorDetails(
-      operationResult,
-      origin
-    );
-    return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
+  if (!productResult) {
+    return await handleError(-1, res);
   }
 
   // Producto creado
 
-  res.send({ status: "success", message: "Product Created", product: product });
+  res.json({ status: "success", message: "Product Created", product: product });
 };
 
 const get = async (req, res) => {
@@ -127,173 +114,100 @@ const get = async (req, res) => {
 
   const products = paginationData.docs;
 
-  if (products < 0 || null) {
-    const { errorName, httpCode, message } = getErrorDetails(result, origin);
-    return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
+  if (!products) {
+    return await handleError(null, res);
   }
 
   return res
     .status(200)
-    .send({ status: "success", payload: products, pagination });
+    .json({ status: "success", payload: products, pagination });
 };
 
 const getById = async (req, res) => {
-  let operationResult;
-
-  const productId = req.params.id;
-
-  const products = await ProductService.getAllProducts();
-
-  if (products == null) {
-    operationResult = null;
-
-    const { errorName, httpCode, message } = getErrorDetails(
-      operationResult,
-      origin
-    );
-    return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
-  }
-
-  const foundProduct = await ProductService.getProductById(productId);
-
-  if (foundProduct == null) {
-    operationResult = -2;
-
-    const { errorName, httpCode, message } = getErrorDetails(
-      operationResult,
-      origin
-    );
-    return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
-  }
-
-  res.send({ status: "success", payload: foundProduct });
+  const product = req.product;
+  res.json({ status: "success", payload: product });
 };
 
 const update = async (req, res) => {
-  let operationResult;
-
-  const productId = req.params.id;
+  const productId = req.params.pid;
 
   const updatedValues = req.body;
 
-  if (updatedValues.title == null) {
-  } else {
-    if (typeof updatedValues.title !== "string") {
-      return res
-        .status(400)
-        .send({ status: "error", error: "Title isn't a Text" });
-    }
+  if (typeof updatedValues.title !== "string") {
+    return res
+      .status(400)
+      .json({ status: "error", error: "Title isn't a Text" });
   }
+
+  if (typeof updatedValues.description !== "string") {
+    return res
+      .status(400)
+      .json({ status: "error", error: "Description isn't a Text" });
+  }
+
+  if (typeof updatedValues.code !== "string") {
+    return res
+      .status(400)
+      .json({ status: "error", error: "Code isn't a Text" });
+  }
+
   if (typeof updatedValues.price !== "number" || isNaN(updatedValues.price)) {
     return res
       .status(400)
-      .send({ status: "error", error: "Price isn't a number" });
+      .json({ status: "error", error: "Price isn't a number" });
   }
 
-  if (updatedValues.stock == null) {
-  } else {
-    if (
-      typeof updatedValues.stock !== "number" ||
-      isNaN(updatedValues.stock) ||
-      updatedValues.stock < 0
-    ) {
-      return res.status(400).send({
-        status: "error",
-        error: "Stock isn't a number or is a negative value",
-      });
-    }
+  if (
+    typeof updatedValues.stock !== "number" ||
+    isNaN(updatedValues.stock) ||
+    updatedValues.stock < 0
+  ) {
+    return res.status(400).json({
+      status: "error",
+      error: "Stock isn't a number or is a negative value",
+    });
   }
 
-  if (updatedValues.status == null) {
-  } else {
-    if (typeof updatedValues.status !== "boolean") {
-      return res
-        .status(400)
-        .send({ status: "error", error: "Status isn't true or false" });
-    }
-  }
-
-  if (updatedValues.category == null) {
-  } else {
-    if (typeof updatedValues.category !== "string") {
-      return res
-        .status(400)
-        .send({ status: "error", error: "Category isn't a Text" });
-    }
-  }
-
-  const foundProduct = await ProductService.getProductById(productId);
-
-  if (foundProduct == null) {
-    operationResult = -2;
-
-    const { errorName, httpCode, message } = getErrorDetails(
-      operationResult,
-      origin
-    );
+  if (typeof updatedValues.status !== "boolean") {
     return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
+      .status(400)
+      .json({ status: "error", error: "Status isn't true or false" });
   }
+
+  if (typeof updatedValues.category !== "string") {
+    return res
+      .status(400)
+      .json({ status: "error", error: "Category isn't a Text" });
+  }
+
+  const foundProduct = req.product;
 
   await ProductService.updateById({ _id: productId }, { $set: updatedValues });
 
-  res.send({
+  res.json({
     status: "success",
     payload: { oldValues: foundProduct, newValues: updatedValues },
   });
 };
 
 const deleteById = async (req, res) => {
-  let operationResult;
-
   const productId = req.params.id;
-
-  const parsedProductId = parseInt(productId, 10);
-
-  if (isNaN(parsedProductId)) {
-    return res
-      .status(400)
-      .send({ status: "error", message: "Please send a valid Product ID" });
-  }
 
   const products = await ProductService.getAllProducts();
 
   if (products == null) {
-    operationResult = null;
-
-    const { errorName, httpCode, message } = getErrorDetails(
-      operationResult,
-      origin
-    );
-    return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
+    return await handleError(null, res);
   }
 
   const foundProduct = await ProductService.getProductById(productId);
 
   if (foundProduct == null) {
-    operationResult = -2;
-
-    const { errorName, httpCode, message } = getErrorDetails(
-      operationResult,
-      origin
-    );
-    return res
-      .status(httpCode)
-      .send({ status: "error", error: errorName, message });
+    return await handleError(-2, res);
   }
 
   await ProductService.deleteProduct(productId);
 
-  res.send({
+  res.json({
     status: "success",
     message: "Product deleted successfully",
     payload: foundProduct,
